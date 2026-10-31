@@ -1,0 +1,8 @@
+{
+  "appId": "com.foggy.weather",
+  "appName": "Foggy",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
