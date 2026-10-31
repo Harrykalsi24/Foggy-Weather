@@ -60,16 +60,22 @@ jobs:
             jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore android/app/release.keystore -storepass foggyweather2026 -keypass foggyweather2026 android/app/build/outputs/apk/release/app-release-unsigned.apk foggy
             mv android/app/build/outputs/apk/release/app-release-unsigned.apk android/app/build/outputs/apk/release/app-release.apk
           fi
+          cp android/app/build/outputs/apk/release/app-release.apk Foggy-Weather-v1.0.1.apk
+          cp android/app/build/outputs/apk/release/app-release.apk app-release.apk
+
+      - name: Remove Outdated Debug APK Asset
+        run: |
+          curl -s -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/releases/assets/696548098" || true
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Foggy-Weather-Release-APK
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: Foggy-Weather-v1.0.1-APK
+          path: Foggy-Weather-v1.0.1.apk
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create or Update GitHub Release with APK
+      - name: Update v1.0.0 Release with Signed APK
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
@@ -78,10 +84,32 @@ jobs:
           body: |
             ## 🌫️ Foggy Weather Android Release APK v1.0.0
             
-            Download `app-release.apk` below and install directly on your Android device.
+            Download `Foggy-Weather-v1.0.1.apk` or `app-release.apk` below and install directly on your Android device.
             - **Google Play Protect Compliant:** Signed release build with explicit cleartext-disabled Network Security Policy & strict backup rules.
+            - **Latest Updates:** 10-search quota modal, masked key privacy, buttery smooth animations & touch scrolling.
             - **Live Web App:** https://harrykalsi24.github.io/Foggy-Weather/
           files: |
-            android/app/build/outputs/apk/release/app-release.apk
+            Foggy-Weather-v1.0.1.apk
+            app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish v1.0.1 Latest Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.1
+          name: "Foggy Weather v1.0.1 (Latest Release)"
+          make_latest: true
+          body: |
+            ## 🌫️ Foggy Weather Android Release APK v1.0.1 (Latest)
+            
+            Download `Foggy-Weather-v1.0.1.apk` below and install directly on your Android device.
+            - **Google Play Protect Compliant:** Signed release build with explicit cleartext-disabled Network Security Policy & strict backup rules.
+            - **Latest Updates:** 10-search quota modal, masked key privacy, buttery smooth animations & touch scrolling.
+            - **Live Web App:** https://harrykalsi24.github.io/Foggy-Weather/
+          files: |
+            Foggy-Weather-v1.0.1.apk
+            app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
