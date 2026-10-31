@@ -104,83 +104,150 @@ export function getCountryFlag(countryCode?: string): string {
 // Landmark / Skyline image cache
 const imageCache = new Map<string, string>();
 
+// Curated iconic landmarks/landscapes avoiding any person/portrait imagery
+const CANONICAL_LANDMARKS: Record<string, string> = {
+  toronto: 'https://images.unsplash.com/photo-1517090504586-fde19ea6066f?auto=format&fit=crop&w=1800&q=80',
+  'new york': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/1920px-New_york_times_square-terabass.jpg',
+  paris: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/1920px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg',
+  tokyo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Tokyo_Skyline20210123.jpg/1920px-Tokyo_Skyline20210123.jpg',
+  london: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1800&q=80',
+  vancouver: 'https://images.unsplash.com/photo-1559511260-66a65e09b245?auto=format&fit=crop&w=1800&q=80',
+  dubai: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Dubai_skyline_2015_%28crop%29.jpg',
+  sydney: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Sydney_Opera_House_-_Dec_2008.jpg/1920px-Sydney_Opera_House_-_Dec_2008.jpg',
+  rome: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/1920px-Colosseo_2020.jpg',
+  washington: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Washington_DC_skyline_from_the_Potomac_River.jpg/1920px-Washington_DC_skyline_from_the_Potomac_River.jpg',
+  hamilton: 'https://images.unsplash.com/photo-1579202673506-ca3ce28943ef?auto=format&fit=crop&w=1800&q=80',
+  victoria: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Victoria_Inner_Harbour_BC.jpg/1920px-Victoria_Inner_Harbour_BC.jpg',
+  lincoln: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Lincoln_Cathedral_from_the_South_West.jpg/1920px-Lincoln_Cathedral_from_the_South_West.jpg',
+  columbus: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Columbus_Ohio_skyline_dusk.jpg/1920px-Columbus_Ohio_skyline_dusk.jpg',
+  sanfrancisco: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=1800&q=80',
+  chicago: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1800&q=80',
+  mumbai: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Marine_Drive_Mumbai.jpg/1920px-Marine_Drive_Mumbai.jpg',
+  delhi: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/India_Gate_in_New_Delhi_03-2016.jpg/1920px-India_Gate_in_New_Delhi_03-2016.jpg',
+  berlin: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Brandenburger_Tor_abends.jpg/1920px-Brandenburger_Tor_abends.jpg',
+};
+
+// Disallowed person keywords in titles, descriptions, extracts or file names
+const PERSON_REGEX = /\b(born|politician|president|governor|minister|player|footballer|cricketer|actor|actress|singer|biography|portrait|headshot|statesman|general|bishop|king|queen|prince|princess|physician|scientist|author|writer|person|he was|she was|he is|she is|who served|monarch|businessman|activist)\b/i;
+
+interface WikiPageItem {
+  title?: string;
+  description?: string;
+  extract?: string;
+  thumbnail?: {
+    source: string;
+    width?: number;
+    height?: number;
+  };
+}
+
 /**
- * Fetch famous place/skyline image for any city in the world via Wikipedia API
+ * Validates that an image depicts a landscape, monument, or skyline rather than a person.
+ * Rejects vertical portrait photos (height > width) and pages describing individuals.
+ */
+function isLandscapeMonumentImage(page: WikiPageItem): boolean {
+  if (!page.thumbnail?.source) return false;
+
+  const w = page.thumbnail.width || 0;
+  const h = page.thumbnail.height || 0;
+
+  // Strict aspect ratio check: reject vertical/tall portrait headshots
+  if (w > 0 && h > 0 && h > w * 0.9) {
+    return false;
+  }
+
+  // Check description and extract for person indicators
+  const textToCheck = `${page.title || ''} ${page.description || ''} ${page.extract || ''}`.toLowerCase();
+  if (PERSON_REGEX.test(textToCheck)) {
+    return false;
+  }
+
+  // Reject filenames indicating personal portraits
+  const src = page.thumbnail.source.toLowerCase();
+  if (src.includes('portrait') || src.includes('headshot') || src.includes('photo_of') || src.includes('profile')) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Fetch famous place, landscape, monument, or skyline image for any city in the world.
+ * Excludes person/portrait photos using multi-stage keyword and aspect-ratio filters.
  */
 export async function fetchCityLandmarkImage(cityName: string, country?: string): Promise<string> {
-  const cacheKey = `${cityName}-${country || ''}`.toLowerCase();
+  const cacheKey = `${cityName}-${country || ''}`.toLowerCase().trim();
   if (imageCache.has(cacheKey)) {
     return imageCache.get(cacheKey)!;
   }
 
-  // Pre-mapped landmarks for iconic consistency
-  const canonicalLandmarks: Record<string, string> = {
-    toronto: 'https://images.unsplash.com/photo-1517090504586-fde19ea6066f?auto=format&fit=crop&w=1800&q=80',
-    'new york': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/New_york_times_square-terabass.jpg/1920px-New_york_times_square-terabass.jpg',
-    paris: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/1920px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg',
-    tokyo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Tokyo_Skyline20210123.jpg/1920px-Tokyo_Skyline20210123.jpg',
-    london: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1800&q=80',
-    vancouver: 'https://images.unsplash.com/photo-1559511260-66a65e09b245?auto=format&fit=crop&w=1800&q=80',
-    dubai: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Dubai_skyline_2015_%28crop%29.jpg',
-    sydney: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Sydney_Opera_House_-_Dec_2008.jpg/1920px-Sydney_Opera_House_-_Dec_2008.jpg',
-    rome: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/1920px-Colosseo_2020.jpg',
-  };
-
-  const lowerCity = cityName.toLowerCase().trim();
-  if (canonicalLandmarks[lowerCity]) {
-    imageCache.set(cacheKey, canonicalLandmarks[lowerCity]);
-    return canonicalLandmarks[lowerCity];
+  const cleanCity = cityName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+  const lowerCity = cleanCity.toLowerCase();
+  if (CANONICAL_LANDMARKS[lowerCity]) {
+    imageCache.set(cacheKey, CANONICAL_LANDMARKS[lowerCity]);
+    return CANONICAL_LANDMARKS[lowerCity];
   }
 
+  // 1. Search Wikipedia specifically for landscape, monuments, and skylines
   const queries = [
-    `${cityName} landmark`,
-    `${cityName} skyline`,
-    `${cityName} city`,
+    `${cleanCity} skyline landscape`,
+    `${cleanCity} monument landmark`,
+    `${cleanCity} architecture cityscape`,
+    `${cleanCity} famous places`,
+    `${cleanCity} city`,
   ];
 
   for (const q of queries) {
     try {
       const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
         q
-      )}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=1600&format=json&origin=*`;
+      )}&gsrlimit=4&prop=pageimages|description|extracts&exintro=1&explaintext=1&exchars=150&piprop=thumbnail&pithumbsize=1600&format=json&origin=*`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        const pages = Object.values(data.query?.pages || {}) as Array<{
-          thumbnail?: { source: string };
-        }>;
-        if (pages.length > 0 && pages[0].thumbnail?.source) {
-          const imgUrl = pages[0].thumbnail.source;
-          imageCache.set(cacheKey, imgUrl);
-          return imgUrl;
+        const pages = Object.values(data.query?.pages || {}) as WikiPageItem[];
+        for (const page of pages) {
+          if (isLandscapeMonumentImage(page)) {
+            const imgUrl = page.thumbnail!.source;
+            imageCache.set(cacheKey, imgUrl);
+            return imgUrl;
+          }
         }
       }
     } catch {
-      //
+      // Continue to next query
     }
   }
 
+  // 2. Wikimedia Commons search with explicit negative operators against persons/portraits
   try {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&titles=${encodeURIComponent(
-      cityName
-    )}&pithumbsize=1600&format=json&origin=*`;
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      const pages = Object.values(data.query?.pages || {}) as Array<{
-        thumbnail?: { source: string };
-      }>;
-      if (pages.length > 0 && pages[0].thumbnail?.source) {
-        const imgUrl = pages[0].thumbnail.source;
-        imageCache.set(cacheKey, imgUrl);
-        return imgUrl;
+    const commonsUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
+      `${cleanCity} landscape OR skyline OR monument -people -person -portrait`
+    )}&gsrlimit=5&prop=pageimages|description&piprop=thumbnail&pithumbsize=1600&format=json&origin=*`;
+    const cRes = await fetch(commonsUrl);
+    if (cRes.ok) {
+      const cData = await cRes.json();
+      const cPages = Object.values(cData.query?.pages || {}) as WikiPageItem[];
+      for (const page of cPages) {
+        if (isLandscapeMonumentImage(page)) {
+          const imgUrl = page.thumbnail!.source;
+          imageCache.set(cacheKey, imgUrl);
+          return imgUrl;
+        }
       }
     }
   } catch {
     //
   }
 
-  const fallback = 'https://images.unsplash.com/photo-1517090504586-fde19ea6066f?auto=format&fit=crop&w=1800&q=80';
+  // 3. Fallback scenic landscapes with guaranteed monument/landscape visuals
+  const scenicFallbacks = [
+    'https://images.unsplash.com/photo-1517090504586-fde19ea6066f?auto=format&fit=crop&w=1800&q=80',
+    'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1800&q=80',
+    'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1800&q=80',
+    'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=1800&q=80',
+  ];
+  const fallback = scenicFallbacks[Math.abs(cityName.length) % scenicFallbacks.length];
   imageCache.set(cacheKey, fallback);
   return fallback;
 }
