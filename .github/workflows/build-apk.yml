@@ -73,12 +73,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.1.0
-          name: "Foggy Weather v1.1.0 (APK)"
+          tag_name: v1.2.0
+          name: "Foggy Weather v1.2.0 (APK)"
           body: |
-            ## 🌫️ Foggy Weather Android Release APK v1.1.0
+            ## 🌫️ Foggy Weather Android Release APK v1.2.0
             
             Download `app-release.apk` below and install directly on your Android device.
+            - **Hero Card Improvements:** Padded background landscape showcase, increased temperature backing plate contrast, enhanced brightness.
             - **Landscape & Monument Filter:** City visuals strictly filtered to skylines, architecture, and famous places (no portraits/people).
             - **Google Play Protect Compliant:** Signed release build with explicit cleartext-disabled Network Security Policy & strict backup rules.
             - **Live Web App:** https://harrykalsi24.github.io/Foggy-Weather/
