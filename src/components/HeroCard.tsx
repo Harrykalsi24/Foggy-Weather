@@ -20,27 +20,29 @@ export const HeroCard: React.FC<HeroCardProps> = ({ city, unit, theme = 'dark' }
 
   return (
     <div
-      className={`relative w-full rounded-3xl overflow-hidden shadow-2xl min-h-[290px] sm:min-h-[310px] flex flex-col justify-between p-6 sm:p-7 group transition-all duration-300 border ${
+      className={`relative w-full rounded-3xl overflow-hidden shadow-2xl min-h-[300px] sm:min-h-[320px] flex flex-col justify-between p-6 sm:p-7 group transition-all duration-300 border ${
         isDark
-          ? 'border-slate-700/50'
-          : 'border-slate-300/80 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.18)]'
+          ? 'bg-[#0c1424] border-slate-700/50'
+          : 'bg-[#0c1424] border-slate-300/80 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.18)]'
       }`}
     >
-      {/* Background Skyline Image with fallback and smooth zoom */}
+      {/* Background Skyline Image: padded on left so full monument/landscape is visible on right with slight temp overlap & enhanced brightness */}
       <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+        className="absolute inset-y-0 right-0 left-[16%] sm:left-[24%] md:left-[28%] bg-cover bg-center transition-transform duration-700 group-hover:scale-105 filter brightness-115 contrast-105"
         style={{
           backgroundImage: `url('${city.bgSkylineUrl}')`,
+          maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.85) 16%, black 100%)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.85) 16%, black 100%)',
         }}
       />
 
-      {/* Dark Vignette / Gradient Overlay to ensure crisp contrast and readability */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0c1424]/95 via-[#0c1424]/80 to-[#0c1424]/30 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0c1424]/90 via-transparent to-black/30 pointer-events-none" />
+      {/* Subtle gentle vignette to preserve image clarity on right while giving left edge seamless blend */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0c1424] via-[#0c1424]/75 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0c1424]/80 via-transparent to-black/20 pointer-events-none" />
 
       {/* Top Header Row */}
       <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="bg-[#0c1424]/75 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/10 shadow-lg">
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
@@ -54,7 +56,7 @@ export const HeroCard: React.FC<HeroCardProps> = ({ city, unit, theme = 'dark' }
         </div>
 
         {/* Air Quality Pill */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-md">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-md">
           <div className="w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
             <Leaf className="w-2.5 h-2.5 text-emerald-400" />
           </div>
@@ -62,10 +64,10 @@ export const HeroCard: React.FC<HeroCardProps> = ({ city, unit, theme = 'dark' }
         </div>
       </div>
 
-      {/* Middle & Bottom Temperature & Conditions */}
-      <div className="relative z-10 mt-4 sm:mt-6">
+      {/* Middle & Bottom Temperature & Conditions: with slightly increased opacity backing plate that gently overlaps image */}
+      <div className="relative z-10 mt-4 sm:mt-6 bg-[#0c1424]/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl max-w-fit">
         <div className="flex items-baseline">
-          <span className="text-6xl sm:text-7xl font-extrabold tracking-tighter text-white leading-none">
+          <span className="text-6xl sm:text-7xl font-extrabold tracking-tighter text-white leading-none drop-shadow-md">
             {currentTemp}
           </span>
           <span className="text-3xl sm:text-4xl font-semibold text-slate-200 ml-1">
