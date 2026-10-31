@@ -2,8 +2,8 @@
 
 > A sleek, responsive, real-time global weather dashboard with live interactive map and landmark imagery.
 
-🌐 **Live Website:** [https://harrykalsi24.github.io/foggy-weather/](https://harrykalsi24.github.io/foggy-weather/)  
-📱 **Android APK:** Available via [GitHub Releases](https://github.com/Harrykalsi24/foggy-weather/releases) / Actions Artifacts
+🌐 **Live Website:** [https://harrykalsi24.github.io/Foggy-Weather/](https://harrykalsi24.github.io/Foggy-Weather/)  
+📱 **Android APK:** [Download APK via GitHub Releases](https://github.com/Harrykalsi24/Foggy-Weather/releases/tag/v1.0.0)
 
 ---
 
@@ -45,13 +45,12 @@ npm run build
 
 ## 📱 Android APK Build
 
+The APK is built automatically on every push via GitHub Actions.
+To build locally:
 ```bash
-# Build web assets and sync to native Android project
 npm run build
 npx cap sync android
-
-# Open in Android Studio or build via Gradle
 cd android
 ./gradlew assembleDebug
 ```
-The generated APK will be at `android/app/build/outputs/apk/debug/app-debug.apk`.
+The APK output is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
