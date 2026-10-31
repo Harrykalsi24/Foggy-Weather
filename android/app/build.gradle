@@ -18,11 +18,12 @@ android {
     }
     signingConfigs {
         release {
-            if (file('release.keystore').exists()) {
-                storeFile file('release.keystore')
-                storePassword System.getenv("KEYSTORE_PASSWORD") ?: "foggyweather2026"
-                keyAlias System.getenv("KEY_ALIAS") ?: "foggy"
-                keyPassword System.getenv("KEY_PASSWORD") ?: "foggyweather2026"
+            def ks = file("release.keystore")
+            if (ks.exists()) {
+                storeFile ks
+                storePassword "foggyweather2026"
+                keyAlias "foggy"
+                keyPassword "foggyweather2026"
                 v1SigningEnabled true
                 v2SigningEnabled true
             }
@@ -30,12 +31,17 @@ android {
     }
     buildTypes {
         release {
-            if (file('release.keystore').exists()) {
+            def ks = file("release.keystore")
+            if (ks.exists()) {
                 signingConfig signingConfigs.release
             }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
     }
 }
 

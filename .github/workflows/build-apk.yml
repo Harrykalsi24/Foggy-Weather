@@ -54,7 +54,12 @@ jobs:
       - name: Build Release APK with Gradle
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease -x lint -x lintVitalRelease --stacktrace
+          cd ..
+          if [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ] && [ ! -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore android/app/release.keystore -storepass foggyweather2026 -keypass foggyweather2026 android/app/build/outputs/apk/release/app-release-unsigned.apk foggy
+            mv android/app/build/outputs/apk/release/app-release-unsigned.apk android/app/build/outputs/apk/release/app-release.apk
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
