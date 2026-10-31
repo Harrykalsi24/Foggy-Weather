@@ -77,15 +77,22 @@ export const HourlyForecast: React.FC<HourlyForecastProps> = ({
         {/* Scrollable Items */}
         <div
           ref={scrollContainerRef}
-          className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar smooth-scroll py-1 px-1 select-none"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorX: 'contain',
+            scrollSnapType: 'x proximity',
+          }}
         >
           {hourly.map((item, index) => {
             const temp = unit === 'C' ? item.tempC : item.tempF;
             return (
               <div
                 key={index}
-                className={`flex flex-col items-center justify-between min-w-[72px] sm:min-w-[84px] py-2 px-1.5 rounded-xl transition-all cursor-pointer ${
+                style={{ scrollSnapAlign: 'start' }}
+                className={`flex flex-col items-center justify-between min-w-[72px] sm:min-w-[84px] py-2 px-1.5 rounded-xl transition-all cursor-pointer flex-shrink-0 ${
                   isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
                 }`}
               >

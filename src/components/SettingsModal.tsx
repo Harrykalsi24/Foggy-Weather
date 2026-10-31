@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sliders, Bell, Compass, RefreshCw, Key, Check } from 'lucide-react';
+import { X, Sliders, Bell, Compass, RefreshCw, Key, Check, ExternalLink, Trash2, ShieldCheck, Info } from 'lucide-react';
 import { TempUnit, ThemeMode } from '../types/weather';
-import { getEffectiveApiKey, saveUserApiKey, OWM_KEY_POOL } from '../services/weatherService';
+import {
+  getUserApiKey,
+  saveUserApiKey,
+  hasUserApiKey,
+  getSearchCount,
+  MAX_DEFAULT_SEARCHES,
+} from '../services/weatherService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -22,11 +28,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [apiKey, setApiKey] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [showKeyInput, setShowKeyInput] = useState(false);
+
+  const customConfigured = hasUserApiKey();
+  const searchesUsed = getSearchCount();
 
   useEffect(() => {
     if (isOpen) {
-      setApiKey(getEffectiveApiKey());
+      setApiKey(getUserApiKey());
       setIsSaved(false);
+      setShowKeyInput(!hasUserApiKey());
     }
   }, [isOpen]);
 
@@ -37,14 +48,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleSaveKey = () => {
     saveUserApiKey(apiKey);
     setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+    setTimeout(() => {
+      setIsSaved(false);
+      if (apiKey.trim()) setShowKeyInput(false);
+    }, 1500);
   };
 
-  const handleUseFreeDefault = () => {
-    setApiKey(OWM_KEY_POOL[0]);
-    saveUserApiKey(OWM_KEY_POOL[0]);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+  const handleRemoveKey = () => {
+    saveUserApiKey('');
+    setApiKey('');
+    setShowKeyInput(true);
   };
 
   return (
@@ -90,46 +103,84 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Key className="w-4 h-4 text-amber-500" />
                 <span className="text-sm font-bold">OpenWeatherMap API Key</span>
               </div>
-              <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                Active / Working
-              </span>
+              {customConfigured ? (
+                <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  Personal Key Active
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-md">
+                  Starter Quota: {searchesUsed}/{MAX_DEFAULT_SEARCHES} used
+                </span>
+              )}
             </div>
 
-            <p className={`text-xs mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Key provided automatically. You can also paste your own personal key below or use zero-key free mode:
+            <p className={`text-xs mb-3 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              {customConfigured
+                ? 'Your personal OpenWeatherMap key is securely stored in this browser/device and grants unlimited searches.'
+                : `Using default starter tier. You have ${Math.max(0, MAX_DEFAULT_SEARCHES - searchesUsed)} free location searches remaining. Enter your personal key for unlimited searches.`}
             </p>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter OpenWeatherMap API Key"
-                className={`flex-1 h-9 px-3 rounded-xl text-xs font-mono border transition-all focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                  isDark
-                    ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500'
-                    : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
-                }`}
-              />
-              <button
-                onClick={handleSaveKey}
-                className="px-3 h-9 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
-              >
-                {isSaved ? <Check className="w-3.5 h-3.5" /> : null}
-                <span>{isSaved ? 'Saved' : 'Save'}</span>
-              </button>
-            </div>
+            {customConfigured && !showKeyInput ? (
+              <div className="flex items-center justify-between p-2.5 rounded-xl border bg-emerald-500/5 border-emerald-500/20 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-emerald-400">••••••••••••••••••••••••••••••••</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowKeyInput(true)}
+                    className="text-xs text-blue-500 hover:underline font-medium cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleRemoveKey}
+                    title="Remove custom key"
+                    className="p-1 rounded text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Enter your personal OpenWeatherMap API Key"
+                    className={`flex-1 h-9 px-3 rounded-xl text-xs font-mono border transition-all focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                      isDark
+                        ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500'
+                        : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                    }`}
+                  />
+                  <button
+                    onClick={handleSaveKey}
+                    className="px-3 h-9 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                  >
+                    {isSaved ? <Check className="w-3.5 h-3.5" /> : null}
+                    <span>{isSaved ? 'Saved' : 'Save'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
-            <div className="mt-2.5 flex items-center justify-between">
-              <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Open-Meteo & RainViewer Radar fallback active
+            <div className="mt-2.5 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[11px]">
+              <span className={`flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                <Info className="w-3 h-3 text-blue-400" />
+                Default key is protected and restricted.
               </span>
-              <button
-                onClick={handleUseFreeDefault}
-                className="text-[11px] font-bold text-blue-500 hover:underline cursor-pointer"
+              <a
+                href="https://openweathermap.org/api"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-blue-500 hover:underline flex items-center gap-1"
               >
-                Restore Default Key
-              </button>
+                <span>Get Free Key (OpenWeather)</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
 

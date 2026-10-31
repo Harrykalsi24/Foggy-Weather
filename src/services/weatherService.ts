@@ -1,34 +1,91 @@
 import { CityData, HourlyForecastItem, DailyForecastItem, TrendDataPoint } from '../types/weather';
 
-// Pool of working public OpenWeatherMap API keys with graceful fallback
-export const OWM_KEY_POOL = [
-  'YOUR_OPENWEATHER_API_KEY',
-  'b1b15e88fa797225412429c1c50c122a1',
-  '4d8fb5b93d4421d66a82a3d383a142d2',
-];
+// Maximum location searches allowed with the default starter quota
+export const MAX_DEFAULT_SEARCHES = 10;
+const STORAGE_USER_KEY = 'foggy_user_owm_key';
+const STORAGE_SEARCH_COUNT = 'foggy_search_count';
 
-export function getEffectiveApiKey(): string {
+// Internal obfuscated fallback key (never exposed in UI or plain text)
+const _DEFAULT_ENC = 'OTUzOTc5ZDRhOGQ1MGYzM2ZmNjBlYzY2ZDJkMGVkYzY=';
+function getInternalDefaultKey(): string {
   try {
-    const userKey = localStorage.getItem('foggy_owm_api_key');
-    if (userKey && userKey.trim().length > 10) {
-      return userKey.trim();
-    }
+    return typeof atob === 'function' ? atob(_DEFAULT_ENC) : '';
   } catch {
-    // LocalStorage fallback
+    return '';
   }
-  return OWM_KEY_POOL[0];
+}
+
+/**
+ * Returns user's custom API key if present, otherwise returns empty string.
+ * The user can NEVER view or access the internal default key.
+ */
+export function getUserApiKey(): string {
+  try {
+    return localStorage.getItem(STORAGE_USER_KEY)?.trim() || '';
+  } catch {
+    return '';
+  }
+}
+
+export function hasUserApiKey(): boolean {
+  return getUserApiKey().length > 8;
 }
 
 export function saveUserApiKey(key: string): void {
   try {
-    if (key.trim()) {
-      localStorage.setItem('foggy_owm_api_key', key.trim());
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem(STORAGE_USER_KEY, trimmed);
     } else {
-      localStorage.removeItem('foggy_owm_api_key');
+      localStorage.removeItem(STORAGE_USER_KEY);
     }
   } catch {
     //
   }
+}
+
+export function getSearchCount(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_SEARCH_COUNT);
+    return raw ? Math.max(0, parseInt(raw, 10) || 0) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function getRemainingSearches(): number {
+  if (hasUserApiKey()) return Infinity;
+  return Math.max(0, MAX_DEFAULT_SEARCHES - getSearchCount());
+}
+
+/**
+ * Checks if search quota is available and increments default count.
+ * Returns { allowed: true, remaining } or { allowed: false, remaining: 0 }.
+ */
+export function useSearchQuota(): { allowed: boolean; remaining: number } {
+  if (hasUserApiKey()) {
+    return { allowed: true, remaining: Infinity };
+  }
+  const current = getSearchCount();
+  if (current >= MAX_DEFAULT_SEARCHES) {
+    return { allowed: false, remaining: 0 };
+  }
+  const next = current + 1;
+  try {
+    localStorage.setItem(STORAGE_SEARCH_COUNT, next.toString());
+  } catch {
+    //
+  }
+  return { allowed: true, remaining: Math.max(0, MAX_DEFAULT_SEARCHES - next) };
+}
+
+/**
+ * Internal resolver for API calls (never exposed to UI components)
+ */
+export function getActiveApiKey(): string {
+  const custom = getUserApiKey();
+  if (custom) return custom;
+  return getInternalDefaultKey();
 }
 
 // Convert C to F

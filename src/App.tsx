@@ -14,7 +14,8 @@ import { MobileQuickStats } from './components/MobileQuickStats';
 import { MobileNav } from './components/MobileNav';
 import { MapView } from './components/MapView';
 import { SettingsModal } from './components/SettingsModal';
-import { fetchFullWeatherData, GeocodedCity } from './services/weatherService';
+import { ApiKeyLimitModal } from './components/ApiKeyLimitModal';
+import { fetchFullWeatherData, GeocodedCity, useSearchQuota } from './services/weatherService';
 
 export function App() {
   const [currentCity, setCurrentCity] = useState<CityData>(CITIES_DATA.toronto);
@@ -22,6 +23,7 @@ export function App() {
   const [theme, setTheme] = useState<ThemeMode>('dark');
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleToggleUnit = () => {
@@ -43,6 +45,13 @@ export function App() {
   };
 
   const handleSelectCityLocation = async (city: GeocodedCity) => {
+    // Check 10-search limit on default key
+    const quota = useSearchQuota();
+    if (!quota.allowed) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const data = await fetchFullWeatherData(
@@ -62,6 +71,13 @@ export function App() {
   };
 
   const handleMyLocation = () => {
+    // Check 10-search limit on default key
+    const quota = useSearchQuota();
+    if (!quota.allowed) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+
     if (!navigator.geolocation) {
       setCurrentCity(CITIES_DATA.toronto);
       return;
@@ -123,6 +139,7 @@ export function App() {
               onBackToHome={() => setActiveTab('home')}
               onMyLocation={handleMyLocation}
               onUpdateCity={setCurrentCity}
+              onSearchLimitReached={() => setIsApiKeyModalOpen(true)}
             />
           ) : (
             <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
@@ -195,6 +212,7 @@ export function App() {
             onBackToHome={() => setActiveTab('home')}
             onMyLocation={handleMyLocation}
             onUpdateCity={setCurrentCity}
+            onSearchLimitReached={() => setIsApiKeyModalOpen(true)}
           />
         ) : (
           /* Mobile Body Content */
@@ -245,6 +263,14 @@ export function App() {
         onSetUnit={setUnit}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+      />
+
+      {/* API Key Quota Limit Modal */}
+      <ApiKeyLimitModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        onKeySaved={() => setIsApiKeyModalOpen(false)}
+        theme={theme}
       />
     </div>
   );

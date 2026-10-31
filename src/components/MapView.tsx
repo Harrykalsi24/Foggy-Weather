@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { CityData, TempUnit, ThemeMode } from '../types/weather';
 import { WeatherIcon } from './WeatherIcon';
-import { searchGlobalCities, GeocodedCity, fetchFullWeatherData } from '../services/weatherService';
+import { searchGlobalCities, GeocodedCity, fetchFullWeatherData, useSearchQuota } from '../services/weatherService';
 
 interface MapViewProps {
   city: CityData;
@@ -19,6 +19,7 @@ interface MapViewProps {
   onBackToHome: () => void;
   onMyLocation: () => void;
   onUpdateCity?: (newCity: CityData) => void;
+  onSearchLimitReached?: () => void;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
@@ -28,6 +29,7 @@ export const MapView: React.FC<MapViewProps> = ({
   onBackToHome,
   onMyLocation,
   onUpdateCity,
+  onSearchLimitReached,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -117,6 +119,11 @@ export const MapView: React.FC<MapViewProps> = ({
 
     // Click anywhere on map to select and fetch location weather!
     map.on('click', async (e: L.LeafletMouseEvent) => {
+      const quota = useSearchQuota();
+      if (!quota.allowed) {
+        onSearchLimitReached?.();
+        return;
+      }
       const { lat, lng } = e.latlng;
       setIsFetchingWeather(true);
       try {
@@ -163,6 +170,11 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   const handleSelectSearchedCity = async (c: GeocodedCity) => {
+    const quota = useSearchQuota();
+    if (!quota.allowed) {
+      onSearchLimitReached?.();
+      return;
+    }
     setIsFetchingWeather(true);
     setIsOpen(false);
     setQuery('');

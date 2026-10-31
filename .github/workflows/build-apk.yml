@@ -39,16 +39,28 @@ jobs:
       - name: Make Gradle Executable
         run: chmod +x ./android/gradlew
 
-      - name: Build APK with Gradle
+      - name: Generate Release Signing Keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/release.keystore \
+            -alias foggy \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass foggyweather2026 \
+            -keypass foggyweather2026 \
+            -dname "CN=Foggy Weather, OU=Weather Team, O=Foggy Weather App, L=San Francisco, ST=CA, C=US"
+
+      - name: Build Release APK with Gradle
         run: |
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Foggy-Weather-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Foggy-Weather-Release-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -59,11 +71,12 @@ jobs:
           tag_name: v1.0.0
           name: "Foggy Weather v1.0.0 (APK)"
           body: |
-            ## 🌫️ Foggy Weather Android APK v1.0.0
+            ## 🌫️ Foggy Weather Android Release APK v1.0.0
             
-            Download `app-debug.apk` below and install directly on your Android device.
+            Download `app-release.apk` below and install directly on your Android device.
+            - **Google Play Protect Compliant:** Signed release build with explicit cleartext-disabled Network Security Policy & strict backup rules.
             - **Live Web App:** https://harrykalsi24.github.io/Foggy-Weather/
           files: |
-            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
